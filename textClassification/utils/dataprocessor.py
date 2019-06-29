@@ -28,7 +28,6 @@ class dataProcessor():
 
         train_set = data_set.train_set
         test_set = data_set.test_set
-        print(train_set[0].__dict__.keys())
 
         if self.config.word_embedding_path:
             pretrained_embedding = Vectors(self.config.word_embedding_path,

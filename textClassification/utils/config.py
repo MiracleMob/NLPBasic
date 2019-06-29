@@ -9,3 +9,5 @@ class Config:
     fast_text_hidden = 300
     word_embedding_path = '../data/glove.6B.300d.txt'
     data_path = '../data/textClassification/'
+    textCnn_filter_num = 100
+    textCnn_filter_size = [3, 4, 5]

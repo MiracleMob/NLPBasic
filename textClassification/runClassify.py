@@ -31,6 +31,7 @@ class Runner(object):
 
         parser.add_argument("--out", help="output model path",
                             default="output")
+        parser.add_argument("--model", default="textcnn")
         parser.add_argument("--device", default="cpu")
 
         self.args = parser.parse_args()
@@ -154,8 +155,12 @@ class Runner(object):
         if self.config.embedding_size == -1:
             self.config.embedding_size = len(TEXT.vocab.itos)
 
-        # model = textCNN(self.config, self.device, pretrain_embedding=embedding_matrix)
-        model = fastText(self.config, self.device, pretrain_embedding=embedding_matrix)
+        if self.args.model == "textcnn":
+            model = textCNN(self.config, self.device, pretrain_embedding=embedding_matrix)
+        elif self.args.model == "fastext":
+            model = fastText(self.config, self.device, pretrain_embedding=embedding_matrix)
+        else:
+            print('None model!')
 
         if self.args.optimizer == "adam":
             optimizer = torch.optim.Adam(model.parameters_requires_grads(),

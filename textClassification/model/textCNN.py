@@ -8,7 +8,9 @@ class textCNN(nn.Module):
         super(textCNN, self).__init__()
         self.config = config
         self.device = device
-        self.label_num = 5
+        self.label_num = config.label_num
+        self.filter_num = config.textCnn_filter_num
+        self.filter_size = config.textCnn_filter_size
         if pretrain_embedding is None:
             pretrain_embedding = torch.nn.init.uniform(
                 torch.FloatTensor(self.config.embedding_size,
@@ -20,21 +22,43 @@ class textCNN(nn.Module):
         self.embedding.weight.data.copy_(pretrain_embedding)
         self.embedding.weight.requires_grad = True
 
-        self.convs = nn.ModuleList()
-        self.linear = nn.Linear(self.config.embedding_dim, 5)
+        self.convs = nn.ModuleList(
+            [nn.Conv2d(1, self.filter_num, (size, self.config.embedding_dim))
+             for size in self.filter_size])
+
+        self.dropout = nn.Dropout(self.config.dropout)
+        self.linear = nn.Linear(self.config.textCnn_filter_num *
+                                len(self.config.textCnn_filter_size),
+                                self.label_num)
         self.to(self.device)
 
 
 
     def forward(self, x):
+
+        #[batch_size, seq_len, embedding_dim]
         h_embedding = self.embedding(x)
-        h_embedding = F.dropout(h_embedding, p=self.config.dropout)
+        #[batch_size, 1, seq_len, embedding_dim]
+        h_embedding = h_embedding.unsqueeze(1)
 
-        out = self.linear(h_embedding)
+        #[batch, filter_num, seq_len(after conv), 1]
+        hidden = [F.relu(conv(h_embedding)) for conv in self.convs]
+        #[batch, filter_num, 1, 1]
+        hidden = [F.max_pool2d(input=h, kernel_size=(h.size(2), h.size(3)))
+                  for h in hidden]
+
+        #[batch, filter_num]
+        hidden = [h.view(h.size(0), -1) for h in hidden]
+
+        #[batch, filter_num * len(filter_size)]
+        hidden = torch.cat(hidden, 1)
+
+        hidden = self.dropout(hidden)
+
         #[batch, label_num]
-        out = torch.sum(out, dim=1)
-        predict = torch.argmax(out, dim=-1)
+        out = self.linear(hidden)
 
+        predict = torch.argmax(out, dim=1)
 
         return out, predict
 
